@@ -1,14 +1,17 @@
 use avian3d::prelude::*;
-use bevy::{input::mouse::AccumulatedMouseMotion, prelude::*};
-use std::f32::consts::FRAC_PI_2;
+use bevy::prelude::*;
 
-const PITCH_LIMIT: f32 = FRAC_PI_2 - 0.02;
+#[derive(Component)]
+struct LeftBall;
+
+#[derive(Component)]
+struct RightBall;
 
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, PhysicsPlugins::default()))
         .add_systems(Startup, setup)
-        .add_systems(Update, mouse_move)
+        .add_systems(Update, keyboard_input)
         .run();
 }
 
@@ -52,22 +55,34 @@ fn setup(
         Transform::from_xyz(0.0, 1.125, 0.0),
     ));
 
-    for x_offset in [-2.5, 2.5] {
-        commands.spawn((
-            RigidBody::Dynamic,
-            Collider::sphere(0.5),
-            Mesh3d(meshes.add(Sphere::new(0.5))),
-            MeshMaterial3d(materials.add(StandardMaterial {
-                base_color: Color::srgb(0.9, 0.5, 0.5),
-                ..default()
-            })),
-            // Separate issue: if the GraviyScale is added here, the difference is ColliderDensity
-            // has no effect
-            //GravityScale(0.1),
-            ColliderDensity(1.0 + x_offset * 0.05),
-            Transform::from_xyz(x_offset, 1.75, 0.0),
-        ));
-    }
+    commands.spawn((
+        LeftBall,
+        RigidBody::Dynamic,
+        Collider::sphere(0.5),
+        Mesh3d(meshes.add(Sphere::new(0.5))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.9, 0.5, 0.5),
+            ..default()
+        })),
+        // Separate issue: if the GraviyScale is added here, the difference is ColliderDensity
+        // has no effect
+        //GravityScale(0.1),
+        ColliderDensity(1.0), // + x_offset * 0.05),
+        Transform::from_xyz(-2.5, 1.75, 0.0),
+    ));
+
+    commands.spawn((
+        RightBall,
+        RigidBody::Dynamic,
+        Collider::sphere(0.5),
+        Mesh3d(meshes.add(Sphere::new(0.5))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.9, 0.5, 0.5),
+            ..default()
+        })),
+        ColliderDensity(1.0), // + x_offset * 0.05),
+        Transform::from_xyz(2.5, 1.75, 0.0),
+    ));
 
     commands.spawn((
         PointLight {
@@ -80,14 +95,12 @@ fn setup(
     ));
 }
 
-fn mouse_move(
-    motion: Res<AccumulatedMouseMotion>,
-    mut transform: Single<&mut Transform, With<Camera3d>>,
+fn keyboard_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut left_ball: Single<&mut ColliderDensity, With<LeftBall>>,
 ) {
-    let delta_yaw = -motion.delta.x * 0.003;
-    let delta_pitch = -motion.delta.y * 0.002;
-    let (yaw, pitch, roll) = transform.rotation.to_euler(EulerRot::YXZ);
-    let yaw = yaw + delta_yaw;
-    let pitch = (pitch + delta_pitch).clamp(-PITCH_LIMIT, PITCH_LIMIT);
-    transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, roll);
+    if keyboard.just_pressed(KeyCode::Space) {
+        println!("{:?}", left_ball.0);
+        left_ball.0 = 5.0;
+    }
 }
